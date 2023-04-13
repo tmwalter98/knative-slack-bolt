@@ -1,17 +1,32 @@
 import json
-from aiohttp import web
 import logging
 import os
 from typing import Awaitable, Callable, Optional
-from cloudevents.http import from_http
-
-from slack_sdk.socket_mode.aiohttp import SocketModeClient
 
 from slack_bolt.app.async_app import AsyncApp
-from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 from slack_sdk.errors import SlackApiError
+from slack_sdk.socket_mode.aiohttp import SocketModeClient
 from slack_sdk.web.async_client import AsyncWebClient
+from data_engine import DataEngine
+import json
+import logging
+import os
+from logging import Logger
+from typing import Callable
 
+from slack_bolt import Ack, Respond
+from slack_bolt.context.ack.ack import Ack
+from slack_bolt.context.respond.respond import Respond
+from slack_sdk import WebClient
+from slack_sdk.models.blocks import InputBlock, PlainTextInputElement, PlainTextObject
+from slack_sdk.models.views import View
+
+from blocks_machine import build_search_results, build_most_recently_released
+
+
+data_engine = DataEngine(
+    "postgresql://postgres:AHZbSY464pjKjyDc@db.cywqiexxljjfurcgaghs.supabase.co/postgres"
+)
 logging.basicConfig(level=logging.DEBUG)
 
 #
@@ -35,45 +50,174 @@ async def event_test(event, say):
     await say(f"Hi there, <@{event['user']}>!")
 
 
-@app.shortcut("product_search")
-async def show_product_updates(
-    ack: Callable[[], Awaitable[None]],
-    body: dict,
-    client: AsyncWebClient,
-):
+async def process_request(respond, body):
+    title = body["text"]
+    respond(f"Completed! (task: {title})")
+
+
+async def open_search(
+    body: dict, ack: Ack, respond: Respond, client: WebClient, logger: Logger
+) -> None:
     await ack()
+    res = await client.views_open(
+        trigger_id=body["trigger_id"],
+        view=View(
+            type="modal",
+            callback_id="view-id",
+            title=PlainTextObject(text="Inventory Search"),
+            submit=PlainTextObject(text="Done"),
+            blocks=[
+                InputBlock(
+                    element=PlainTextInputElement(action_id="search-query"),
+                    label=PlainTextObject(text="Search items"),
+                    dispatch_action=True,
+                    others={"hint": "Hint"},
+                    block_id="search-query",
+                    action_id="search-query",
+                )
+            ],
+        ),
+    )
+
+
+@app.action("track-product")
+async def track_product(ack: Ack, body: dict, client: WebClient, logger: Logger):
+    await ack()
+    product_variant = body["actions"][0].get("value")
+    product_id, variant_id = product_variant.split("/")
+
+    logger.info("Tracking product: " + product_id)
+
+    product_id, variant_id = int(product_id), int(variant_id)
+    data_engine.track_product(product_id, True)
+
+    results = data_engine.search_products(
+        body["view"]["state"]["values"]["search-query"]["search-query"]["value"]
+    )
+    data_engine.set_view_data(body["view"]["id"], results)
+
+    res = await client.views_update(
+        trigger_id=body["trigger_id"],
+        view_id=body["view"]["id"],
+        # String that represents view state to protect against race conditions
+        hash=body["view"]["hash"],
+        view=View(
+            type="modal",
+            callback_id="view-id",
+            title=PlainTextObject(text="Product Search"),
+            blocks=[
+                InputBlock(
+                    element=PlainTextInputElement(action_id="search-query"),
+                    label=PlainTextObject(text="Search"),
+                    dispatch_action=True,
+                    others={"hint": "Hint"},
+                    block_id="search-query",
+                    action_id="search-query",
+                ),
+                *build_search_results(results),
+            ],
+        ),
+    )
+
+
+@app.action("untrack-product")
+async def track_product(ack: Ack, body: dict, client: WebClient, logger: Logger):
+    ack()
+    product_variant = body["actions"][0].get("value")
+    product_id, variant_id = product_variant.split("/")
+
+    logger.info("Untracking product: " + product_id)
+
+    product_id, variant_id = int(product_id), int(variant_id)
+    data_engine.track_product(product_id, False)
+
+    results = data_engine.search_products(
+        body["view"]["state"]["values"]["search-query"]["search-query"]["value"]
+    )
+    data_engine.set_view_data(body["view"]["id"], results)
+
+    res = client.views_update(
+        trigger_id=body["trigger_id"],
+        view_id=body["view"]["id"],
+        # String that represents view state to protect against race conditions
+        hash=body["view"]["hash"],
+        view=View(
+            type="modal",
+            callback_id="view-id",
+            title=PlainTextObject(text="Product Search"),
+            blocks=[
+                InputBlock(
+                    element=PlainTextInputElement(action_id="search-query"),
+                    label=PlainTextObject(text="Search"),
+                    dispatch_action=True,
+                    others={"hint": "Hint"},
+                    block_id="search-query",
+                    action_id="search-query",
+                ),
+                *build_search_results(results),
+            ],
+        ),
+    )
+
+
+@app.action("search-query")
+async def perform_search(ack: Ack, body: dict, client: WebClient, logger: Logger):
+    await ack()
+    search_term = body["actions"][0].get("value")
+    logger.info(f"Searching for: {search_term}")
+
+    results = data_engine.search_products(search_term)
+    data_engine.set_view_data(body["view"]["id"], results)
+    blocks = build_search_results(results)
+
+    await client.views_update(
+        trigger_id=body["trigger_id"],
+        view_id=body["view"]["id"],
+        # String that represents view state to protect against race conditions
+        hash=body["view"]["hash"],
+        view=View(
+            type="modal",
+            callback_id="view-id",
+            title=PlainTextObject(text="Product Search"),
+            blocks=[
+                InputBlock(
+                    element=PlainTextInputElement(action_id="search-query"),
+                    label=PlainTextObject(text="Search"),
+                    dispatch_action=True,
+                    others={"hint": "Hint"},
+                    block_id="search-query",
+                    action_id="search-query",
+                ),
+                *blocks,
+            ],
+        ),
+    )
+
+
+app.action("a")(process_request)
+
+app.shortcut("product_updates")(
+    open_search
+)
+app.shortcut("product_search")(
+    open_search
+)
+
+
+async def push_home_view(client, event, logger):
+    logger.info("Pushing home view")
+    new_items = data_engine.get_new_products()
+    blocks = build_most_recently_released(new_items)
     try:
-        await client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "title": {"type": "plain_text", "text": "Product Updates"},
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "Here are the latest product updates:",
-                        },
-                    },
-                    {"type": "divider"},
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Product 1*\nNew feature added!",
-                        },
-                    },
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*Product 2*\nPrice decreased by 10%!",
-                        },
-                    },
-                    {"type": "divider"},
-                ],
-            },
+        await client.views_publish(
+            user_id=event["user"],
+            view=View(
+                type="home",
+                blocks=blocks,
+            ),
         )
-    except SlackApiError as e:
-        print(f"Error opening modal: {e}")
+    except Exception as e:
+        logger.error(print(e))
+
+
+app.event("app_home_opened")(push_home_view)

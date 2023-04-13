@@ -10,7 +10,9 @@ spec:
         autoscaling.knative.dev/min-scale: "1"
     spec:
       containers:
-        - image: gcr.io/knative-samples/helloworld-go
+        - image: docker.io/library/tmwalter98/knative-slack-bolt:latest
           env:
-            - name: TARGET
-              value: "Go Sample v1"
+            - name: SLACK_BOT_TOKEN
+              value: "xoxb-"
+            - name: SLACK_APP_TOKEN
+              value: "xapp-"

@@ -1,23 +1,14 @@
-from bot_app import app
 import json
-from aiohttp import web
 import logging
 import os
-from typing import Callable, Optional
+
+from aiohttp import web
 from cloudevents.http import from_http
-
-from slack_sdk.socket_mode.aiohttp import SocketModeClient
-
-from slack_bolt.app.async_app import AsyncApp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
-from slack_sdk.errors import SlackApiError
-from slack_sdk.web.async_client import AsyncWebClient
+
+from bot_app import app
 
 logging.basicConfig(level=logging.DEBUG)
-
-#
-# Web app for hosting the healthcheck endpoint for k8s etc.
-#
 
 
 async def healthcheck(_req: web.Request) -> web.Response:
@@ -28,11 +19,14 @@ async def healthcheck(_req: web.Request) -> web.Response:
 
 
 async def cloudevent(_req: web.Request) -> web.Response:
-    event = from_http(_req.headers, _req.content)
-    print(
-        f"Found {event['id']} from {event['source']} with type ",
-        f"{event['type']} and specversion {event['specversion']}",
+    def unmarshaller(x):
+        return str(x)
+
+    bytestr_data = await _req.read()
+    event = from_http(
+        _req.headers, bytearray(bytestr_data), data_unmarshaller=unmarshaller
     )
+    return web.Response(status=200, text=json.dumps(event, indent=4, default=str))
 
 
 web_app = app.web_app()
@@ -60,4 +54,4 @@ if __name__ == "__main__":
 
     web_app.on_startup.append(start_socket_mode)
     web_app.on_shutdown.append(shutdown_socket_mode)
-    web.run_app(app=web_app, port=8080)
+    web.run_app(app=web_app, port=int(os.environ.get("PORT", 8080)))
