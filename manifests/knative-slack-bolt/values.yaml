@@ -1,0 +1,5 @@
+image:
+  repository: "093896728566.dkr.ecr.us-east-1.amazonaws.com/knative-slack-bolt"
+  tag: "f2de073559e5bf068f6f64f6a12a9d23ce336e64"
+slack_bot_token: "xoxb-"
+slack_app_token: "xapp-"

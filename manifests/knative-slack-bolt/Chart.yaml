@@ -1,0 +1,5 @@
+apiVersion: v2
+name: knative-slack-bolt-chart
+description: A Helm chart for deploying the Knative Slack Bolt service
+version: 0.1.0
+appVersion: 1.0.0
