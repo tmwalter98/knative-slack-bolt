@@ -10,7 +10,7 @@ spec:
         autoscaling.knative.dev/min-scale: "1"
     spec:
       containers:
-        - image: docker.io/library/tmwalter98/knative-slack-bolt:latest
+        - image: 093896728566.dkr.ecr.us-east-1.amazonaws.com/knative-slack-bolt:latest
           env:
             - name: SLACK_BOT_TOKEN
               value: "xoxb-"
