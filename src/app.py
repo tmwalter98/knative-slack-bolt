@@ -4,6 +4,8 @@ import os
 
 from aiohttp import web
 from cloudevents.http import from_http
+from slack_sdk.errors import SlackApiError
+
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
 
 from bot_app import app
@@ -26,6 +28,18 @@ async def cloudevent(_req: web.Request) -> web.Response:
     event = from_http(
         _req.headers, bytearray(bytestr_data), data_unmarshaller=unmarshaller
     )
+
+    channel_id = "C03K73L2CQL"
+    try:
+        # Call the chat.postMessage method using the WebClient
+        result = await app.client.chat_postMessage(
+            channel=channel_id, text=json.dumps(event, indent=4, default=str)
+        )
+        app.logger.info(result)
+
+    except SlackApiError as e:
+        app.logger.error(f"Error posting message: {e}")
+
     return web.Response(status=200, text=json.dumps(event, indent=4, default=str))
 
 

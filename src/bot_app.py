@@ -27,7 +27,6 @@ from blocks_machine import build_search_results, build_most_recently_released
 data_engine = DataEngine(
     "postgresql://postgres:AHZbSY464pjKjyDc@db.cywqiexxljjfurcgaghs.supabase.co/postgres"
 )
-logging.basicConfig(level=logging.DEBUG)
 
 #
 # Socket Mode Bolt app
@@ -122,7 +121,7 @@ async def track_product(ack: Ack, body: dict, client: WebClient, logger: Logger)
 
 @app.action("untrack-product")
 async def track_product(ack: Ack, body: dict, client: WebClient, logger: Logger):
-    ack()
+    await ack()
     product_variant = body["actions"][0].get("value")
     product_id, variant_id = product_variant.split("/")
 
@@ -136,7 +135,7 @@ async def track_product(ack: Ack, body: dict, client: WebClient, logger: Logger)
     )
     data_engine.set_view_data(body["view"]["id"], results)
 
-    res = client.views_update(
+    res = await client.views_update(
         trigger_id=body["trigger_id"],
         view_id=body["view"]["id"],
         # String that represents view state to protect against race conditions
@@ -196,12 +195,8 @@ async def perform_search(ack: Ack, body: dict, client: WebClient, logger: Logger
 
 app.action("a")(process_request)
 
-app.shortcut("product_updates")(
-    open_search
-)
-app.shortcut("product_search")(
-    open_search
-)
+app.shortcut("product_updates")(open_search)
+app.shortcut("product_search")(open_search)
 
 
 async def push_home_view(client, event, logger):
