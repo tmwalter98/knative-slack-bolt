@@ -87,12 +87,16 @@ class ShopifyStoreVariantsChange(ShopifyStoreBase):
     __tablename__ = "shopify_store_variants_changes"
     __table_args__ = {"schema": "public"}
 
-    change_id = Column(UUID, primary_key=True, server_default=text("uuid_generate_v4()"))
+    change_id = Column(
+        UUID, primary_key=True, server_default=text("uuid_generate_v4()")
+    )
     operation = Column(Text)
     id = Column(
         BigInteger,
         nullable=False,
-        server_default=text("nextval('shopify_store_variants_changes_id_seq'::regclass)"),
+        server_default=text(
+            "nextval('shopify_store_variants_changes_id_seq'::regclass)"
+        ),
     )
     title = Column(Text)
     option1 = Column(Text)
@@ -108,9 +112,15 @@ class ShopifyStoreVariantsChange(ShopifyStoreBase):
     compare_at_price = Column(MONEY)
     position = Column(Integer)
     product_id = Column(ForeignKey("shopify_store_products.id", ondelete="CASCADE"))
-    changed_at = Column(DateTime(True), nullable=False, server_default=text("(now() AT TIME ZONE 'utc'::text)"))
+    changed_at = Column(
+        DateTime(True),
+        nullable=False,
+        server_default=text("(now() AT TIME ZONE 'utc'::text)"),
+    )
 
-    product = relationship("ShopifyStoreProduct", backref="shopify_store_variants_changes")
+    product = relationship(
+        "ShopifyStoreProduct", backref="shopify_store_variants_changes"
+    )
 
 
 class ShopifyStoreProductNotification(UtilsBase):
@@ -120,9 +130,17 @@ class ShopifyStoreProductNotification(UtilsBase):
     id = Column(UUID, primary_key=True, server_default=text("uuid_generate_v1()"))
     product_id = Column(ForeignKey("shopify_store_products.id", ondelete="CASCADE"))
     variant_id = Column(ForeignKey("shopify_store_variants.id", ondelete="CASCADE"))
-    notification_at = Column(DateTime(True), nullable=False, server_default=text("(now() AT TIME ZONE 'utc'::text)"))
+    notification_at = Column(
+        DateTime(True),
+        nullable=False,
+        server_default=text("(now() AT TIME ZONE 'utc'::text)"),
+    )
     delivered = Column(Boolean, nullable=False, server_default=text("false"))
-    change_id = Column(ForeignKey("public.shopify_store_variants_changes.change_id"), nullable=False, unique=True)
+    change_id = Column(
+        ForeignKey("public.shopify_store_variants_changes.change_id"),
+        nullable=False,
+        unique=True,
+    )
 
     change = relationship("ShopifyStoreVariantsChange")
     product = relationship("ShopifyStoreProduct")

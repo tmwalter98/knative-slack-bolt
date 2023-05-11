@@ -51,7 +51,8 @@ def build_search_results(
 
         stock_status_memo = f'{":white_check_mark: *in stock*" if variant.available else ":x: *out of stock*"}'
         last_updated = humanize.naturaldelta(
-            cast_timestamp_utc(datetime.datetime.now()) - cast_timestamp_utc(variant.updated_at)
+            cast_timestamp_utc(datetime.datetime.now())
+            - cast_timestamp_utc(variant.updated_at)
         )
 
         blocks.extend(
@@ -78,9 +79,13 @@ def build_search_results(
                 ActionsBlock(
                     elements=[
                         ButtonElement(
-                            action_id="untrack-product" if product.track else "track-product",
+                            action_id="untrack-product"
+                            if product.track
+                            else "track-product",
                             text=PlainTextObject(
-                                text="Turn off notificaitons" if product.track else "Turn on notifications"
+                                text="Turn off notificaitons"
+                                if product.track
+                                else "Turn on notifications"
                             ),
                             value=product_variant,
                             style="danger" if product.track else "primary",
@@ -115,7 +120,8 @@ def build_most_recently_released(
 
         stock_status_memo = f'{":white_check_mark: *in stock*" if variant.available else ":x: *out of stock*"}'
         released_ago = humanize.naturaldelta(
-            cast_timestamp_utc(datetime.datetime.now()) - cast_timestamp_utc(product.published_at)
+            cast_timestamp_utc(datetime.datetime.now())
+            - cast_timestamp_utc(product.published_at)
         )
 
         blocks.extend(
@@ -145,9 +151,13 @@ def build_most_recently_released(
                 ActionsBlock(
                     elements=[
                         ButtonElement(
-                            action_id="untrack-product" if product.track else "track-product",
+                            action_id="untrack-product"
+                            if product.track
+                            else "track-product",
                             text=PlainTextObject(
-                                text="Turn off notificaitons" if product.track else "Turn on notifications"
+                                text="Turn off notificaitons"
+                                if product.track
+                                else "Turn on notifications"
                             ),
                             value=product_variant,
                             style="danger" if product.track else "primary",
@@ -173,7 +183,8 @@ def build_notification_block(
 ) -> List[Block]:
     print(str(notable_changes))
     updated_ago = humanize.naturaldelta(
-        cast_timestamp_utc(datetime.datetime.now()) - cast_timestamp_utc(variant.updated_at)
+        cast_timestamp_utc(datetime.datetime.now())
+        - cast_timestamp_utc(variant.updated_at)
     )
 
     stock_status_memo = f'{":white_check_mark: *in stock*" if variant.available else ":x: *out of stock*"}'

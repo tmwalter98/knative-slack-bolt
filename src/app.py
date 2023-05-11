@@ -12,6 +12,7 @@ from bot_app import app
 from data_engine import DataEngine
 
 logging.basicConfig(level=logging.INFO)
+
 data_engine = DataEngine(
     "postgresql://postgres:ByK64.{Chrbh&hMjuAV7PLv>c-?D@shopping-services.cigwtl4yjm4i.us-east-1.rds.amazonaws.com/postgres"
 )
@@ -25,35 +26,24 @@ async def healthcheck(_req: web.Request) -> web.Response:
 
 
 async def cloudevent(_req: web.Request) -> web.Response:
-    def unmarshaller(x):
-        return str(x)
+    def unmarshaller(v):
+        if isinstance(v, bytes):
+            return v.decode("utf-8")
 
     bytestr_data = await _req.read()
     # event = from_http(_req.headers, bytearray(bytestr_data), data_unmarshaller=unmarshaller)
     event = from_http(_req.headers, bytestr_data, data_unmarshaller=unmarshaller)
+    event_data = json.loads(event.data)
 
     channel_id = "C03K73L2CQL"
+    notification_id = event_data["payload"]["after"]["id"]
     try:
-        app.logger.error(event.data)
-    except:
-        app.logger.error("error at #1")
-    try:
-        app.logger.error(event.data["payload"])
-    except:
-        app.logger.error("error at #2")
-    try:
-        app.logger.error(event.data["payload"]["notification_id"])
-    except:
-        app.logger.error("error at #3")
-
-    notification_id = event.data["payload"]["notification_id"]
-    try:
-        # Call the chat.postMessage method using the WebClient
-
-        app.logger.error(notification_id)
-        notification, variant_change, variant, product = await data_engine.get_notification_related_objects(
-            notification_id
-        )
+        app.logger.info(f"Received notification ID: {notification_id}")
+        (
+            variant_change,
+            variant,
+            product,
+        ) = await data_engine.get_notification_related_objects(notification_id)
 
         featured_image = (
             variant.featured_image.get("src", False)
@@ -62,22 +52,43 @@ async def cloudevent(_req: web.Request) -> web.Response:
         )
 
         notable_changes = await data_engine.get_notable_changes(variant_change)
+        app.logger.error(
+            f"Change set: {' '.join([f'{k}: {v}' for k, v in notable_changes.items()])}"
+        )
 
-        message_title = f"{product.title} - {variant.title if variant.title != 'Default Title' else ''}"
+        message_title_components = [product.title]
+        message_title_components.append(
+            variant.title if variant.title != "Default Title" else None
+        )
+
+        message_title_updates = []
         if "available" in notable_changes:
             availability = "available" if variant.available else "unavailable"
-            message_title = f"{message_title} - now {availability}!"
-        elif "price" in notable_changes:
-            d_price = "drop" if notable_changes["price"][0] > notable_changes["price"][1] else "increase"
-            message_title = f"{message_title} - price {d_price}!"
-        app.logger.error(str(notable_changes))
+            message_title_updates.append(f"now {availability}!")
+        if "price" in notable_changes:
+            d_price = (
+                "drop"
+                if notable_changes["price"][0] > notable_changes["price"][1]
+                else "increase"
+            )
+            message_title_updates.append(f"price {d_price}!")
+        message_title_components.append(
+            " with ".join(message_title_updates) if len(message_title_updates) else None
+        )
+        message_title = " ".join(list(filter(None.__ne__, message_title_components)))
+
+        # Call the chat.postMessage method using the WebClient
         result = await app.client.chat_postMessage(
             channel=channel_id,
             text=message_title,
-            blocks=build_notification_block(product, variant, message_title, featured_image, notable_changes),
+            blocks=build_notification_block(
+                product, variant, message_title, featured_image, notable_changes
+            ),
         )
 
-        await data_engine.mark_notification_delivered(notification_id, result.status_code == 200)
+        await data_engine.mark_notification_delivered(
+            notification_id, result.status_code == 200
+        )
 
     except SlackApiError as e:
         app.logger.error(f"Error posting message: {e}")

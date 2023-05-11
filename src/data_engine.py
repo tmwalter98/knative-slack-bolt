@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, create_engine, desc, or_
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import and_, create_engine, desc, or_, select
+from sqlalchemy.orm import aliased, sessionmaker
 from sqlalchemy.sql.expression import text
 
 from models.shopify_store import (
@@ -42,11 +42,15 @@ class DataEngine:
 
             # Create a join between the tables
             q = (
-                session.query(ShopifyStoreProduct, ShopifyStoreVariant, ShopifyStoreImage)
+                session.query(
+                    ShopifyStoreProduct, ShopifyStoreVariant, ShopifyStoreImage
+                )
                 .select_from(ShopifyStoreProduct)
                 .join(ShopifyStoreVariant)
                 .filter(
-                    text(f"to_tsvector('english', {fulltext_column_join}) @@ plainto_tsquery('english', :search_term)")
+                    text(
+                        f"to_tsvector('english', {fulltext_column_join}) @@ plainto_tsquery('english', :search_term)"
+                    )
                 )
             )
             q = q.params(search_term=search_term)
@@ -61,7 +65,9 @@ class DataEngine:
     ) -> List[Tuple[ShopifyStoreProduct, ShopifyStoreVariant, ShopifyStoreImage]]:
         with self.session() as session, session.begin():
             q = (
-                session.query(ShopifyStoreProduct, ShopifyStoreVariant, ShopifyStoreImage)
+                session.query(
+                    ShopifyStoreProduct, ShopifyStoreVariant, ShopifyStoreImage
+                )
                 .select_from(ShopifyStoreProduct)
                 .join(ShopifyStoreVariant)
                 .join(ShopifyStoreImage)
@@ -69,7 +75,11 @@ class DataEngine:
                     ShopifyStoreImage.product_id == ShopifyStoreProduct.id,
                     ShopifyStoreImage.position == 1,
                 )
-                .filter(ShopifyStoreProduct.vendor.in_(["UniFi", "Rove Concepts - New York/New Jersey - CL"]))
+                .filter(
+                    ShopifyStoreProduct.vendor.in_(
+                        ["UniFi", "Rove Concepts - New York/New Jersey - CL"]
+                    )
+                )
                 .order_by(ShopifyStoreProduct.published_at.desc())
                 .limit(item_count)
             )
@@ -77,32 +87,30 @@ class DataEngine:
 
     def track_product(self, product_id: str, track: bool) -> None:
         with self.session() as session:
-            session.query(ShopifyStoreProduct).filter(ShopifyStoreProduct.id == product_id).update({"track": track})
+            session.query(ShopifyStoreProduct).filter(
+                ShopifyStoreProduct.id == product_id
+            ).update({"track": track})
             session.commit()
 
-    async def get_notable_changes(self, variant_change: ShopifyStoreVariantsChange) -> Dict[str, Any]:
+    async def get_notable_changes(
+        self, variant_change: ShopifyStoreVariantsChange
+    ) -> Dict[str, Any]:
         """Get the notable changes between the previous and current change."""
         with self.session() as sess:
-            subquery = (
-                sess.query(
-                    ShopifyStoreVariantsChange.changed_at.label("changed_at"),
-                )
-                .filter(ShopifyStoreVariantsChange.change_id == variant_change.change_id)
-                .subquery()
-            )
-
             query = (
                 sess.query(ShopifyStoreVariantsChange)
                 .filter(
                     and_(
                         ShopifyStoreVariantsChange.id == variant_change.id,
-                        ShopifyStoreVariantsChange.changed_at <= subquery.c.changed_at,
+                        ShopifyStoreVariantsChange.changed_at
+                        <= variant_change.changed_at,
                     )
                 )
                 .order_by(desc(ShopifyStoreVariantsChange.changed_at))
                 .limit(2)
             )
             changes = query.all()
+            print([c.change_id for c in changes])
 
             change_set = {}
             notable_change_types = {"price", "available"}
@@ -112,15 +120,23 @@ class DataEngine:
                 # if getattr(prev_change, 'operation')
                 for attr in ShopifyStoreVariantsChange.__table__.columns:
                     if (
-                        getattr(prev_change, attr.name) != getattr(curr_change, attr.name)
+                        getattr(prev_change, attr.name)
+                        != getattr(curr_change, attr.name)
                         and attr.name in notable_change_types
                     ):
                         change_set.update(
-                            {attr.name: (getattr(prev_change, attr.name), getattr(curr_change, attr.name))}
+                            {
+                                attr.name: (
+                                    getattr(prev_change, attr.name),
+                                    getattr(curr_change, attr.name),
+                                )
+                            }
                         )
             return change_set
 
-    async def get_featured_image(self, product_id: int, variant_id: int) -> Optional[str]:
+    async def get_featured_image(
+        self, product_id: int, variant_id: int
+    ) -> Optional[str]:
         """Get the featured image for a product."""
         with self.session() as sess:
             image: Optional[ShopifyStoreImage] = (
@@ -146,30 +162,30 @@ class DataEngine:
 
     async def get_notification_related_objects(
         self, notification_id: str
-    ) -> Tuple[ShopifyStoreProductNotification, ShopifyStoreVariantsChange, ShopifyStoreVariant, ShopifyStoreProduct,]:
+    ) -> Tuple[ShopifyStoreVariantsChange, ShopifyStoreVariant, ShopifyStoreProduct]:
         with self.session() as sess:
-            q = (
-                sess.query(
-                    ShopifyStoreProductNotification,
-                    ShopifyStoreVariantsChange,
-                    ShopifyStoreVariant,
-                    ShopifyStoreProduct,
-                )
-                .join(
-                    ShopifyStoreVariant,
-                    ShopifyStoreVariant.id == ShopifyStoreVariantsChange.id,
-                )
-                .join(
-                    ShopifyStoreProduct,
-                    ShopifyStoreProduct.id == ShopifyStoreVariantsChange.product_id,
-                )
-                .filter(
-                    ShopifyStoreProductNotification.id == notification_id,
+            variants_change = aliased(ShopifyStoreVariantsChange)
+            variant = aliased(ShopifyStoreVariant)
+            product = aliased(ShopifyStoreProduct)
+
+            stmt = (
+                select(variants_change, variant, product)
+                .select_from(variants_change)
+                .join(product, product.id == variants_change.product_id)
+                .join(variant, variant.id == variants_change.id)
+                .where(
+                    variants_change.change_id
+                    == select(ShopifyStoreProductNotification.change_id)
+                    .where(ShopifyStoreProductNotification.id == notification_id)
+                    .scalar_subquery()
                 )
             )
-            return q.first()
 
-    async def mark_notification_delivered(self, notification_id: str, delivered: bool = True) -> None:
+            return sess.execute(stmt).one()
+
+    async def mark_notification_delivered(
+        self, notification_id: str, delivered: bool = True
+    ) -> None:
         with self.session() as sess:
             sess.query(ShopifyStoreProductNotification).filter(
                 ShopifyStoreProductNotification.id == notification_id,
