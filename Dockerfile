@@ -22,4 +22,4 @@ COPY --from=builder /app/requirements.txt /app
 
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-ENTRYPOINT ["python3", "app.py"]
+ENTRYPOINT ["python3", "-u", "app.py"]
