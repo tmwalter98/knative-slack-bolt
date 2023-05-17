@@ -6,7 +6,7 @@ version: "1.0"
 stages:
   - "clone"
   - "build"
-  - "test"
+  - "push"
 
 steps:
   clone:
@@ -22,17 +22,29 @@ steps:
   build:
     title: "Building Docker image"
     type: "build"
-    image_name: "tmwalter98/knative-slack-bolt"
+    image_name: "${{IMAGE_NAME}}"
     working_directory: "${{clone}}"
-    tag: "${{CF_BRANCH_TAG_NORMALIZED}}"
+    tag: "${{CF_REVISION}}"
     dockerfile: "Dockerfile"
     stage: "build"
 
-  test:
-    title: "Running test"
-    type: "freestyle" # Run any command
-    image: "ubuntu:latest" # The image in which command will be executed
-    working_directory: "${{clone}}" # Running command where code cloned
+  push:
+    stage: "push"
+    title: Push Docker image to ECR
+    type: push
+    image_name: "${{IMAGE_NAME}}"
+    tags:
+      - "latest"
+      - "${{CF_REVISION}}"
+    candidate: ${{build}}
+    registry: "${{IMAGE_NAME}}"
+
+  MyDeploy:
+    title: K8s Deploy
+    image: codefresh/cf-deploy-kubernetes:master
     commands:
-      - "ls"
-    stage: "test"
+      - /cf-deploy-kubernetes deployment.yml
+    environment:
+      - KUBECONTEXT=my-cluster-name
+      - KUBERNETES_NAMESPACE=my-namespace
+# export GIT_TOKEN=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

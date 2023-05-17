@@ -25,7 +25,7 @@ from blocks_machine import build_search_results, build_most_recently_released
 
 
 data_engine = DataEngine(
-    "postgresql://postgres:AHZbSY464pjKjyDc@db.cywqiexxljjfurcgaghs.supabase.co/postgres"
+    os.environ["POSTGRES_URL"]
 )
 
 #

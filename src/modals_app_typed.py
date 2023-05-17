@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 from data_engine import DataEngine
 
 data_engine = DataEngine(
-    "postgresql://postgres:AHZbSY464pjKjyDc@db.cywqiexxljjfurcgaghs.supabase.co/postgres"
+    os.environ["POSTGRES_URL"]
 )
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
 
