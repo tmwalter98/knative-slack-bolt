@@ -20,3 +20,5 @@ spec:
               value: "xapp-"
             - name: POSTGRES_URL
               value: "postgresql://username:password@host/database"
+            - name: CHANNEL_ID
+              value: "A00B00C0DEF"

@@ -1,0 +1,43 @@
+display_information:
+  name: Inventory Management
+  description: Inventory Tracking and Notification System
+  background_color: "#487BF5"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: Inventory Management Bot
+    always_online: true
+  shortcuts:
+    - name: Product Search
+      type: global
+      callback_id: product-search
+      description: Search for products and control notifications
+  slash_commands:
+    - command: /product-search
+      description: Open Product search page
+      should_escape: false
+    - command: /tracked-products
+      description: Launches list of tracked products
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.customize
+      - chat:write.public
+      - incoming-webhook
+      - channels:join
+      - channels:read
+      - commands
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_home_opened
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

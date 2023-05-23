@@ -690,6 +690,18 @@ files = [
 ]
 
 [[package]]
+name = "path-dict"
+version = "4.0.0"
+description = "Extends Python's dict with useful extras"
+category = "main"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "path_dict-4.0.0-py3-none-any.whl", hash = "sha256:c8d1809740542c5bc7f1dce09660d51e3bab49e33b3a5a989440c3a2d4d53b5e"},
+    {file = "path_dict-4.0.0.tar.gz", hash = "sha256:98c1ce36a998ed89020995cfce55b452e78a31d9c5bfb523fbf4ef798ff58818"},
+]
+
+[[package]]
 name = "pathspec"
 version = "0.11.1"
 description = "Utility library for gitignore style pattern matching of file paths."
@@ -1056,4 +1068,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "35da15b90476af334eb0e3bba28d314fbb71ec4c79a7a35e6c8045d9a2321070"
+content-hash = "2bf0d8fd4e6e2ad86a3ad46f840458e9a816291cb9fe1c289f641c5244599be1"
