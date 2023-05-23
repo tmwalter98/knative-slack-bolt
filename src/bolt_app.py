@@ -13,9 +13,7 @@ from slack_sdk.web.async_client import AsyncWebClient
 from blocks_machine import build_most_recently_released, build_search_results
 from data_engine import DataEngine
 
-data_engine = DataEngine(
-    os.environ["POSTGRES_URL"]
-)
+data_engine = DataEngine(os.environ["POSTGRES_URL"])
 #
 # Socket Mode Bolt app
 #
@@ -42,7 +40,13 @@ async def process_request(respond, body):
     respond(f"Completed! (task: {title})")
 
 
-async def open_search(body: dict, ack: AsyncAck, respond: AsyncRespond, client: AsyncWebClient, logger: Logger) -> None:
+async def open_search(
+    body: dict,
+    ack: AsyncAck,
+    respond: AsyncRespond,
+    client: AsyncWebClient,
+    logger: Logger,
+) -> None:
     await ack()
     res = await client.views_open(
         trigger_id=body["trigger_id"],
@@ -66,7 +70,9 @@ async def open_search(body: dict, ack: AsyncAck, respond: AsyncRespond, client: 
 
 
 @app.action("track-product")
-async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger):
+async def track_product(
+    ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger
+):
     await ack()
     product_variant = body["actions"][0].get("value")
     product_id, variant_id = product_variant.split("/")
@@ -76,7 +82,9 @@ async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logge
     product_id, variant_id = int(product_id), int(variant_id)
     data_engine.track_product(product_id, True)
 
-    results = data_engine.search_products(body["view"]["state"]["values"]["search-query"]["search-query"]["value"])
+    results = data_engine.search_products(
+        body["view"]["state"]["values"]["search-query"]["search-query"]["value"]
+    )
     data_engine.set_view_data(body["view"]["id"], results)
 
     res = await client.views_update(
@@ -104,7 +112,9 @@ async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logge
 
 
 @app.action("untrack-product")
-async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger):
+async def track_product(
+    ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger
+):
     await ack()
     product_variant = body["actions"][0].get("value")
     product_id, variant_id = product_variant.split("/")
@@ -114,7 +124,9 @@ async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logge
     product_id, variant_id = int(product_id), int(variant_id)
     data_engine.track_product(product_id, False)
 
-    results = data_engine.search_products(body["view"]["state"]["values"]["search-query"]["search-query"]["value"])
+    results = data_engine.search_products(
+        body["view"]["state"]["values"]["search-query"]["search-query"]["value"]
+    )
     data_engine.set_view_data(body["view"]["id"], results)
 
     res = await client.views_update(
@@ -142,7 +154,9 @@ async def track_product(ack: AsyncAck, body: dict, client: AsyncWebClient, logge
 
 
 @app.action("search-query")
-async def perform_search(ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger):
+async def perform_search(
+    ack: AsyncAck, body: dict, client: AsyncWebClient, logger: Logger
+):
     await ack()
     search_term = body["actions"][0].get("value")
     logger.info(f"Searching for: {search_term}")
