@@ -9,7 +9,7 @@ Python Slack Bolt App Webstore Inventory Tracker on Knative
 
 I wanted to track inventory for a handful of sites with high demand products and this Slack app the user facing portion used to select products of interest and relay stock and price change notifications.
 
-### Inventory Tracking Scraping Services
+### Inventory Tracking Scraping Services _not contained herein_
 
 Inventory data is aquired on a scheduled basis using Prefect aataflow automation.  Prefect Cloud is usde to orchestrate flow runs which are executed by the Prefect Agent in ECS.  Up-to-date product inventory data is retained within RDS and changed trigger the creation of audit records.
 
