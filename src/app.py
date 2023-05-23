@@ -13,9 +13,7 @@ from data_engine import DataEngine
 
 logging.basicConfig(level=logging.INFO)
 
-data_engine = DataEngine(
-    "postgresql://postgres:ByK64.{Chrbh&hMjuAV7PLv>c-?D@shopping-services.cigwtl4yjm4i.us-east-1.rds.amazonaws.com/postgres"
-)
+data_engine = DataEngine(os.environ["POSTGRES_URL"])
 
 
 async def healthcheck(_req: web.Request) -> web.Response:

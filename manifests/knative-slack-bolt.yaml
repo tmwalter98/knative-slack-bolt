@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: knative-slack-bolt
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "1"
+        autoscaling.knative.dev/max-scale: "1"
+    spec:
+      containers:
+        - image: tmwalter98/knative-slack-bolt:latest
+          imagePullPolicy: Always
+          env:
+            - name: SLACK_BOT_TOKEN
+              value: "xoxb-"
+            - name: SLACK_APP_TOKEN
+              value: "xapp-"
+            - name: POSTGRES_URL
+              value: "postgresql://username:password@host/database"
