@@ -52,7 +52,7 @@ async def cloudevent_handler(req: web.Request) -> web.Response:
     notification_id = event_data["payload", "after", "id"]
 
     app: KnativeSlackBolt = req.app["slack_app"]
-    status_code = app.handle_cloudevent_notifications(notification_id)
+    status_code = await app.handle_cloudevent_notifications(notification_id)
 
     return web.Response(
         status=status_code, text=json.dumps(event, indent=4, default=str)
