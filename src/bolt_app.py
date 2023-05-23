@@ -249,7 +249,6 @@ class KnativeSlackBolt(AsyncApp):
             raise exc
 
     async def handle_cloudevent_notifications(self, notification_id: str):
-        notification_delivered = False
         try:
             self.logger.info(f"Received notification ID: {notification_id}")
 
