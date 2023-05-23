@@ -2,7 +2,7 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: knative-slack-bolt
-  namespace: default
+  namespace: knative
 spec:
   template:
     metadata:
@@ -22,3 +22,36 @@ spec:
               value: "postgresql://username:password@host/database"
             - name: CHANNEL_ID
               value: "A00B00C0DEF"
+---
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
+metadata:
+  name: kafka-topic-source
+  namespace: knative
+spec:
+  net:
+    sasl:
+      enable: true
+      user:
+        secretKeyRef:
+          name: kafka_broker
+          key: user
+      password:
+        secretKeyRef:
+          name: kafka_broker
+          key: password
+      type:
+        secretKeyRef:
+          name: kafka_broker
+          key: saslType
+    tls:
+      enable: true
+  initialOffset: earliest
+  bootstrapServers: []
+  topics: []
+  sink:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: knative-slack-bolt
+    uri: /cloudevents

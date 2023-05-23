@@ -1,55 +1,70 @@
-# Codefresh-cli 
-Build: [![Codefresh build status]( https://g.codefresh.io/api/badges/pipeline/codefresh-inc/codefresh-io%2Fcli%2Fbuild?type=cf-2)]( https://g.codefresh.io/public/accounts/codefresh-inc/pipelines/codefresh-io/cli/build)
-Release: [![Codefresh build status]( https://g.codefresh.io/api/badges/pipeline/codefresh-inc/codefresh-io%2Fcli%2Frelease?type=cf-2)]( https://g.codefresh.io/public/accounts/codefresh-inc/pipelines/codefresh-io/cli/release)
+Python Slack Bolt App Webstore Inventory Tracker on Knative
+======
 
+[![Build and Push to Docker Hub](https://github.com/tmwalter98/knative-slack-bolt/actions/workflows/build_push_dockerhub.yaml/badge.svg)](https://github.com/tmwalter98/knative-slack-bolt/actions/workflows/build_push_dockerhub.yaml)
 
-Codefresh CLI provides a full and flexible interface to interact with Codefresh.
+> This project is work in progress
 
-![demo](cli.gif)
+## Project Background
 
-## Install
-In case you have node.js installed you can easily install with NPM.
+I wanted to track inventory for a handful of sites with high demand products and this Slack app the user facing portion used to select products of interest and relay stock and price change notifications.
 
-`npm install -g codefresh`
+### Inventory Tracking Scraping Services
 
-For other installation possibilities check out the <a href="http://cli.codefresh.io/installation" target="_blank">installation documentation</a>.
+Inventory data is aquired on a scheduled basis using Prefect aataflow automation.  Prefect Cloud is usde to orchestrate flow runs which are executed by the Prefect Agent in ECS.  Up-to-date product inventory data is retained within RDS and changed trigger the creation of audit records.
 
-## Authenticate
-Generate a new api key from the <a href="https://g.codefresh.io/account-conf/tokens" target="_blank">account settings</a> page.
+### Inventory Tracking Notification and Management Services
 
-`codefresh auth create-context --api-key {{API_KEY}}`
+The Inventory Tracking Notification and Management Services are backed by the same RDS instance as the scraping services.
 
-## Usage
-```$xslt
-codefresh <command>
+```mermaid
+graph TB
+    linkStyle default interpolate linear
 
-Commands:
-  codefresh completion             generate bash completion script
-  codefresh tag <id> [tags..]      Add an image tag.
-  codefresh untag <id> [tags..]    Untag an image.
-  codefresh annotate               Annotate a resource with labels.
-  codefresh patch                  Patch a resource by filename or stdin.
-  codefresh auth                   Manage authentication contexts.
-  codefresh create                 Create a resource from a file or stdin.
-  codefresh delete                 Delete a resource by file or resource name.
-  codefresh generate               Generate resources as Kubernetes image pull secret and Codefresh Registry token.
-  codefresh get                    Display one or many resources.
-  codefresh replace                Replace a resource by filename.
-  codefresh version                Print version.
-  codefresh logs <id>              Show logs of a build.
-  codefresh restart <id>           Restart a build by its id.
-  codefresh terminate <id>         Terminate a build by its id.
-  codefresh wait <id..>            Wait until a condition will be met on a build.
-  codefresh run <name>             Run a pipeline by id or name and attach the created workflow logs.
-  codefresh delete-release [name]  Delete a helm release from a kubernetes cluster.
-  codefresh install-chart          Install or upgrade a Helm chart Repository flag can be either absolute url or saved repository in Codefresh.
-  codefresh helm-promotion         Promote a Helm release in another environment.
-  codefresh test-release [name]    Test a helm release.
+    subgraph kubernetes["Microk8s"]
+      direction LR
+      subgraph knative[Knative]
+        direction LR
+        kn_source_kafka(Knative Source for Apache Kafka)
+        kn_slack_bolt(fab:fa-python Knative Slack Bolt)
+        kn_source_kafka -- CloudEvents --> kn_slack_bolt
+      end
+      subgraph kafka[Kafka Services]
+        direction LR
+        debezium[Debezium CDC]
+        kafka_topic[product_notifications topic]
+      end
+    end
+    subgraph Y["fab:fa-aws Amazon Web Services"]
+      direction LR
+      rds[(RDS PostgreSQL)]
+    end
 
-Options:
-  --cfconfig  Custom path for authentication contexts config file  [default: "/Users/itaigendler/.cfconfig"]
-  --help      Show help  [boolean]
+    slack(fab:fa-slack Slack)
+    rds --> debezium --> kafka_topic
+    kafka_topic --> kn_source_kafka
+    kn_slack_bolt <-. Websockets .-> slack
+    kn_slack_bolt <--> rds
+    
+    click kn_source_kafka "https://knative.dev/docs/eventing/sources/kafka-source/" "Knative Source for Apache Kafka" _blank
 ```
 
-## Documentation
-For more information please visit the official <a href="http://cli.codefresh.io" target="_blank">CLI documentation</a> site.
+#### Components
+
+##### Slack Bolt App
+
+Python Slack Bolt application that runs on Knative Serving and receives notifications via [CloudEvents](https://cloudevents.io/) from Knative Eventing's [Knative Source for Apache Kafka](https://knative.dev/docs/eventing/sources/kafka-source/#knative-source-for-apache-kafka).
+
+This app also features the ability for Slack users to search available products and toggle notifications.
+
+##### Knative Source for Apache Kafka
+
+[Knative Source for Apache Kafka](https://knative.dev/docs/eventing/sources/kafka-source/#knative-source-for-apache-kafka) listens to Kafka topics and relays messages to specified sink as a Cloud Event.
+
+##### Apache Kafka Broker
+
+Notification event topic broker.
+
+##### Debezium CDC Connector
+
+Listens to change events for specific tables and sends them to the Slack Bolt App to deliver the notification.
