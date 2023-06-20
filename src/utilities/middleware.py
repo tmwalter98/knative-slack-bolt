@@ -32,7 +32,7 @@ async def healthcheck_handler(req: web.Request) -> web.Response:
     """
     app: KnativeSlackBolt = req.app["slack_app"]
     client = app.socket_mode_handler.client
-    if client is not None and client.is_connected():
+    if client is not None and await client.is_connected():
         return web.Response(status=200, text="OK")
     return web.Response(status=503, text="The Socket Mode client is inactive")
 
