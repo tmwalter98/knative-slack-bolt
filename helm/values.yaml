@@ -1,0 +1,9 @@
+image:
+  repository: tmwalter98/knative-slack-bolt
+  tag: latest
+  pullPolicy: Always
+
+slackBotToken: xoxb-
+
+minScale: "1"
+maxScale: "1"
