@@ -3,7 +3,10 @@ image:
   tag: latest
   pullPolicy: Always
 
-slackBotToken: xoxb-
+slackBotToken: ""
+slackAppToken: ""
+postgresUrl: ""
+channelId: ""
 
 minScale: "1"
 maxScale: "1"

@@ -16,3 +16,9 @@ spec:
           env:
             - name: SLACK_BOT_TOKEN
               value: "{{ .Values.slackBotToken }}"
+            - name: SLACK_APP_TOKEN
+              value: "{{ .Values.slackAppToken }}"
+            - name: POSTGRES_URL
+              value: "{{ .Values.postgresUrl }}"
+            - name: CHANNEL_ID
+              value: "{{ .Values.channelId }}"
