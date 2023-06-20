@@ -13,6 +13,12 @@ spec:
       containers:
         - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+          readinessProbe:
+            httpGet:
+              path: /healthz
           env:
             - name: SLACK_BOT_TOKEN
               value: "{{ .Values.slackBotToken }}"
