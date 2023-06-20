@@ -1,0 +1,12 @@
+image:
+  repository: tmwalter98/knative-slack-bolt
+  tag: latest
+  pullPolicy: Always
+
+slackBotToken: ""
+slackAppToken: ""
+postgresUrl: ""
+channelId: ""
+
+minScale: "1"
+maxScale: "1"

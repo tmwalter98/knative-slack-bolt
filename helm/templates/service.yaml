@@ -1,0 +1,30 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: knative-slack-bolt
+  namespace: {{ .Release.Namespace }}
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "{{ .Values.minScale }}"
+        autoscaling.knative.dev/max-scale: "{{ .Values.maxScale }}"
+    spec:
+      containers:
+        - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+          readinessProbe:
+            httpGet:
+              path: /healthz
+          env:
+            - name: SLACK_BOT_TOKEN
+              value: "{{ .Values.slackBotToken }}"
+            - name: SLACK_APP_TOKEN
+              value: "{{ .Values.slackAppToken }}"
+            - name: POSTGRES_URL
+              value: "{{ .Values.postgresUrl }}"
+            - name: CHANNEL_ID
+              value: "{{ .Values.channelId }}"
