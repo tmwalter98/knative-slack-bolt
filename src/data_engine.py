@@ -1,10 +1,11 @@
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, create_engine, desc, or_, select
+from sqlalchemy import MetaData, and_, create_engine, desc, or_, select
 from sqlalchemy.orm import aliased, sessionmaker
 from sqlalchemy.sql.expression import text
 
 from models.shopify_store import (
+    Base,
     ShopifyStoreImage,
     ShopifyStoreProduct,
     ShopifyStoreProductNotification,
@@ -16,6 +17,10 @@ from models.shopify_store import (
 class DataEngine:
     def __init__(self, db_url: str):
         self.engine = create_engine(db_url)
+
+        # Create tables if they do not yet exist
+        Base.metadata.create_all(self.engine)
+
         self.session = sessionmaker(bind=self.engine)
         self.view_data_storage = {}
 

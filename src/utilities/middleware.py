@@ -49,6 +49,8 @@ async def cloudevent_handler(req: web.Request) -> web.Response:
     bytestr_data = await req.read()
     event = from_http(req.headers, bytestr_data, data_unmarshaller=unmarshaller)
     event_data = PathDict(json.loads(event.data))
+    req.app.logger.info(json.dumps(json.loads(event.data), indent=4))
+    
     notification_id = event_data["payload", "after", "id"]
 
     app: KnativeSlackBolt = req.app["slack_app"]
